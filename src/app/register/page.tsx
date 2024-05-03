@@ -1,7 +1,9 @@
 "use client";
 import { QueryClient, useMutation } from "@tanstack/react-query";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { User, registerUser } from "../_lib/userApi";
+import { RegisterUserPayload, registerUser } from "../_lib/userApi";
+import { setAuthToken } from "../_utils/utils";
+import { useRouter } from "next/navigation";
 
 const queryClient = new QueryClient();
 
@@ -13,6 +15,8 @@ type Inputs = {
 };
 
 const Register = () => {
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -25,17 +29,18 @@ const Register = () => {
     isError,
     error,
   } = useMutation({
-    mutationFn: (userData: User) => {
+    mutationFn: (userData: RegisterUserPayload) => {
       return registerUser(userData);
     },
-    onSuccess: async (data) => {
+    onSuccess: async ({ data: { token } }) => {
       await queryClient.invalidateQueries({
         queryKey: ["posts"],
         exact: true,
         refetchType: "active",
       });
 
-      console.log(data);
+      setAuthToken(token);
+      router.push("/chats");
     },
     onError: (error) => {
       console.error(error);

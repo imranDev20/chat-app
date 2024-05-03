@@ -1,10 +1,11 @@
 "use client";
+import PrivateRoute from "@/app/_components/global/private-route";
+import { getContacts } from "@/app/_lib/contactApi";
 import { useQuery } from "@tanstack/react-query";
-import { getContacts } from "../_lib/contactApi";
 import Link from "next/link";
-import PrivateRoute from "../_components/global/private-route";
+import { ReactNode } from "react";
 
-const Chats = () => {
+const ChatsLayout = ({ children }: { children: ReactNode }) => {
   const { data: contactsData, isPending: isGetContactsPending } = useQuery({
     queryKey: ["contacts"],
     queryFn: async () => {
@@ -21,9 +22,17 @@ const Chats = () => {
 
   return (
     <PrivateRoute>
-      <ul>{contactList}</ul>
+      <div
+        style={{
+          display: "flex",
+        }}
+      >
+        <ul style={{ width: "20%" }}>{contactList}</ul>
+
+        <div>{children}</div>
+      </div>
     </PrivateRoute>
   );
 };
 
-export default Chats;
+export default ChatsLayout;
