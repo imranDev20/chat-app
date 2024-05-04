@@ -48,13 +48,6 @@ export default function Login() {
     },
   });
 
-  useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      router.push("/chats");
-    }
-  }, [router]);
-
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     await loginMutation({
       password: data.password,

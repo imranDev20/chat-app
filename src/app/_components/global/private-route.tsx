@@ -3,6 +3,7 @@ import { getAuthToken } from "@/app/_utils/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { UserProvider } from "../providers/user-provider";
 
 export default function PrivateRoute({ children }: { children: ReactNode }) {
   const token = getAuthToken();
@@ -12,8 +13,6 @@ export default function PrivateRoute({ children }: { children: ReactNode }) {
     queryFn: () => verifyTokenOnServer(token as string),
   });
 
-  console.log(userData);
-
   if (isUserDataPending) {
     return <p>Loading...</p>;
   }
@@ -22,5 +21,5 @@ export default function PrivateRoute({ children }: { children: ReactNode }) {
     redirect("/login");
   }
 
-  return children;
+  return <UserProvider user={userData}>{children}</UserProvider>;
 }

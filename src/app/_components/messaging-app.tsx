@@ -1,21 +1,43 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
+import { useUserContext } from "./providers/user-provider";
+import { useQuery } from "@tanstack/react-query";
+import { getMessages } from "../_lib/messageApi";
 
 const socket = io("http://localhost:5000");
 // const currentUser = "user1"; // Replace with the current user's ID
 
-function Home() {
+function MessagingApp({ recipient }: { recipient: string }) {
+  const {
+    user: { data },
+  } = useUserContext();
+  const currentUser = data?.userId;
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
-  const [recipient, setRecipient] = useState(""); // Add recipient state
-  const [currentUser, setCurrentUser] = useState("");
+
+  const { data: savedMessages, isPending: isGetSavedMessagesPending } =
+    useQuery({
+      queryKey: ["messages"],
+      queryFn: async () => {
+        const res = await getMessages({
+          sender: currentUser,
+          recipient,
+          page: 1,
+        });
+
+        return res;
+      },
+    });
+
+  const [messages, setMessages] = useState<any[]>(
+    savedMessages?.messages || []
+  );
 
   useEffect(() => {
     // Join a chat room with the current user and the recipient
     if (recipient) {
       const users = [currentUser, recipient].sort();
-      const room = users.join("-");
+
       socket.emit("join-chat", users);
 
       socket.on("receive-message", (data) => {
@@ -28,28 +50,49 @@ function Home() {
     }
   }, [recipient, currentUser]);
 
+  useEffect(() => {
+    // Update messages state with saved messages when they are fetched
+    if (savedMessages) {
+      setMessages(savedMessages?.messages);
+    }
+  }, [savedMessages]);
+
   const sendMessage = () => {
     if (message.trim() !== "") {
       const room = [currentUser, recipient].sort().join("-");
-      socket.emit("send-message", { room, message, sender: currentUser });
+      socket.emit("send-message", {
+        room,
+        message,
+        sender: currentUser,
+        recipient,
+      });
       setMessage("");
     }
   };
 
+  if (isGetSavedMessagesPending) {
+    return <p>Loading...</p>;
+  }
+
+  const messageList = messages.map((msg, index) => {
+    const isSenderMessage = msg.sender === currentUser;
+
+    return (
+      <li
+        key={index}
+        style={{
+          color: isSenderMessage ? "blue" : "grey",
+        }}
+      >
+        {msg.content}
+      </li>
+    );
+  });
+
   return (
     <div>
-      <input
-        type="text"
-        placeholder="Current User"
-        value={currentUser}
-        onChange={(e) => setCurrentUser(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Recipient"
-        value={recipient}
-        onChange={(e) => setRecipient(e.target.value)}
-      />
+      <ul>{messageList}</ul>
+
       <input
         type="text"
         placeholder="Message"
@@ -62,15 +105,8 @@ function Home() {
         }}
       />
       <button onClick={sendMessage}>Send</button>
-      <ul>
-        {messages.map((msg, index) => (
-          <li key={index}>
-            <strong>{msg.sender}:</strong> {msg.message}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
-export default Home;
+export default MessagingApp;
